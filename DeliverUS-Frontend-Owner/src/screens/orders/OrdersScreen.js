@@ -18,21 +18,63 @@ import ImageCard from '../../components/ImageCard'
 
 export default function OrdersScreen ({ navigation, route }) {
   const [restaurant, setRestaurant] = useState({})
+  const [orders, setOrders] = useState([])
+  const [analytics, setAnalytics] = useState(null)
 
   useEffect(() => {
     fetchRestaurantDetail()
+    fetchRestaurantOrders()
+    fetchRestaurantAnalytics()
   }, [route])
 
   const fetchRestaurantAnalytics = async () => {
-
+    try {
+      const analytics = await getRestaurantAnalytics(route.params.id)
+      setAnalytics(analytics)
+    } catch (error) {
+      showMessage({
+        message: `There was an error while retrieving analytics (id ${route.params.id}). ${error}`,
+        type: 'error',
+        style: GlobalStyles.flashStyle,
+        titleStyle: GlobalStyles.flashTextStyle
+      })
+    }
   }
 
   const fetchRestaurantOrders = async () => {
-
+    try {
+      const orders = await getRestaurantOrders(route.params.id)
+      setOrders(orders)
+    } catch (error) {
+      showMessage({
+        message: `There was an error while retrieving orders (id ${route.params.id}). ${error}`,
+        type: 'error',
+        style: GlobalStyles.flashStyle,
+        titleStyle: GlobalStyles.flashTextStyle
+      })
+    }
   }
 
   const handleNextStatus = async (order) => {
-
+     /// SOLUTION. Excercise - Order status change
+    try {
+      await nextStatus(order)
+      showMessage({
+        message: `Order ${order.id} status updated`,
+        type: 'success',
+        style: GlobalStyles.flashStyle,
+        titleStyle: GlobalStyles.flashTextStyle
+      })
+      fetchRestaurantOrders()
+      fetchRestaurantAnalytics()
+    } catch (error) {
+      showMessage({
+        message: `Error advancing order status. ${error}`,
+        type: 'danger',
+        style: GlobalStyles.flashStyle,
+        titleStyle: GlobalStyles.flashTextStyle
+      })
+    }
   }
 
   const renderAnalytics = () => {
@@ -44,7 +86,7 @@ export default function OrdersScreen ({ navigation, route }) {
                 Invoiced today
               </TextRegular>
               <TextSemiBold textStyle={styles.text}>
-              TO DO
+               {analytics.invoicedToday.toFixed(2)}€
               </TextSemiBold>
             </View>
             <View style={styles.analyticsCell}>
@@ -52,7 +94,7 @@ export default function OrdersScreen ({ navigation, route }) {
                 #Pending orders
               </TextRegular>
               <TextSemiBold textStyle={styles.text}>
-              TO DO
+                {analytics.numPendingOrders}
               </TextSemiBold>
             </View>
           </View>
@@ -63,7 +105,7 @@ export default function OrdersScreen ({ navigation, route }) {
                   #Delivered today
                 </TextRegular>
                 <TextSemiBold textStyle={styles.text}>
-                TO DO
+                {analytics.numDeliveredTodayOrders}
                 </TextSemiBold>
               </View>
               <View style={styles.analyticsCell}>
@@ -71,7 +113,7 @@ export default function OrdersScreen ({ navigation, route }) {
                   #Yesterday orders
                 </TextRegular>
                 <TextSemiBold textStyle={styles.text}>
-                TO DO
+                {analytics.numYesterdayOrders}
                 </TextSemiBold>
               </View>
           </View>
@@ -89,6 +131,7 @@ export default function OrdersScreen ({ navigation, route }) {
             <TextRegular textStyle={styles.description}>{restaurant.restaurantCategory ? restaurant.restaurantCategory.name : ''}</TextRegular>
           </View>
         </ImageBackground>
+        { analytics !== null && renderAnalytics()}
       </View>
     )
   }
@@ -107,7 +150,56 @@ export default function OrdersScreen ({ navigation, route }) {
   }
 
   const renderOrder = ({ item }) => {
+     // SOLUTION. Excercise - Restaurant orders listing(without the next status button)
+    return (
+      <ImageCard
+        imageUri={getOrderImage(item.status)}
+        title={`Order created at ${item.createdAt}`}
+      >
+        <TextRegular numberOfLines={2}>Status: {item.status}</TextRegular>
+        <TextRegular numberOfLines={2}>Address: {item.address}</TextRegular>
+        <TextSemiBold>{item.price.toFixed(2)}€</TextSemiBold>
 
+        <View style={styles.actionButtonsContainer}>
+
+          {/* SOLUTION. Excercise - Edit order */}
+          <Pressable
+            onPress={() => navigation.navigate('EditOrderScreen', { orderId: item.id })}
+            style={({ pressed }) => [
+              {
+                backgroundColor: pressed
+                  ? GlobalStyles.brandBlueTap
+                  : GlobalStyles.brandBlue
+              },
+              styles.actionButton
+            ]}>
+            <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'center' }}>
+              <MaterialCommunityIcons name='pencil' color={'white'} size={20}/>
+              <TextRegular textStyle={styles.text}>Edit</TextRegular>
+            </View>
+          </Pressable>
+
+          {/* SOLUTION. Excercise - Order status change */}
+          {item.status !== 'delivered' &&
+            <Pressable
+              onPress={() => handleNextStatus(item)}
+              style={({ pressed }) => [
+                {
+                  backgroundColor: pressed
+                    ? GlobalStyles.brandGreenTap
+                    : GlobalStyles.brandGreen
+                },
+                styles.actionButton
+              ]}>
+              <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'center' }}>
+                <MaterialCommunityIcons name='skip-next' color={'white'} size={20}/>
+                <TextRegular textStyle={styles.text}>Advance</TextRegular>
+              </View>
+            </Pressable>
+          }
+        </View>
+      </ImageCard>
+    )
   }
 
   const renderEmptyOrdersList = () => {
@@ -133,7 +225,15 @@ export default function OrdersScreen ({ navigation, route }) {
   }
 
   return (
-      <></>
+     // SOLUTION. Excercise - Restaurant orders listing
+      <FlatList
+        ListHeaderComponent={renderHeader}
+        ListEmptyComponent={renderEmptyOrdersList}
+        style={styles.container}
+        data={orders}
+        renderItem={renderOrder}
+        keyExtractor={item => item.id.toString()}
+      />
   )
 }
 
@@ -196,7 +296,8 @@ const styles = StyleSheet.create({
     paddingVertical: 10
   },
   analyticsRow: {
-
+    flexDirection: 'row',
+    justifyContent: 'space-around'
   },
   analyticsCell: {
     margin: 5,

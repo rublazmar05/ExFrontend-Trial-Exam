@@ -24,11 +24,11 @@ function remove (id) {
 }
 
 function getRestaurantOrders (restaurantId) {
-  return get(`/restaurants/${restaurantId}/orders`)
+  return get(`restaurants/${restaurantId}/orders`)
 }
 
 function getRestaurantAnalytics (restaurantId) {
-
+  return get(`restaurants/${restaurantId}/analytics`)
 }
 
 export { getRestaurantOrders, getRestaurantAnalytics, getAll, getDetail, getRestaurantCategories, create, update, remove }
